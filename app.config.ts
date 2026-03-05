@@ -7,7 +7,7 @@ const timestamp = bundleId.split(".").pop()?.replace(/^t/, "") ?? "";
 const schemeFromBundleId = `manus${timestamp}`;
 
 const env = {
-  appName: "Nearby Glasses",
+  appName: "GlassesNearby Pro",
   appSlug: "nearby_glasses",
   logoUrl: "https://d2xsxph8kpxj0f.cloudfront.net/310519663402520795/C6eAreBQMVQA5VxzZNqUX9/icon-HscdfdFQ7bjfaFtczNM9Lu.png",
   scheme: schemeFromBundleId,

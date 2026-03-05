@@ -15,3 +15,4 @@
 - [x] Add privacy disclaimer / false positive warning in Settings
 - [x] Fix simulated scanner callback ref to prevent re-render loop
 - [x] Unit tests for smart glasses detection logic (21 tests passing)
+- [x] Rename app from "Nearby Glasses" to "GlassesNearby Pro"
