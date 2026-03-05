@@ -44,6 +44,7 @@ const MAPPING = {
   "shield.fill": "shield",
   "lock.fill": "lock",
   "waveform": "graphic-eq",
+  "ant.fill": "bug-report",
 } as unknown as IconMapping;
 
 /**
