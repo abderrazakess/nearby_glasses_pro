@@ -23,3 +23,4 @@
 - [x] Add Android runtime Bluetooth permission request (API 31+ and <31)
 - [x] Add scanMode LOW_LATENCY for more aggressive scanning
 - [x] Add Debug tab showing all raw BLE devices with company IDs for troubleshooting
+- [x] Add Meta Quest 3 Bluetooth company identifier to detection database (uses same 0x058E / 0x01AB IDs as Ray-Ban Meta)
