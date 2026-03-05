@@ -17,3 +17,9 @@
 - [x] Unit tests for smart glasses detection logic (21 tests passing)
 - [x] Rename app from "Nearby Glasses" to "GlassesNearby Pro"
 - [x] Remove Open Source (AGPL-3.0) row from Settings screen
+- [x] Fix native BLE scanner to detect real Ray-Ban glasses on physical device
+- [x] Verify all Ray-Ban Gen 1 company IDs are correct (0x01AB, 0x058E, 0x0D53, 0x03C2)
+- [x] Fix BLE manufacturer data parsing - use atob() for base64 decoding in React Native
+- [x] Add Android runtime Bluetooth permission request (API 31+ and <31)
+- [x] Add scanMode LOW_LATENCY for more aggressive scanning
+- [x] Add Debug tab showing all raw BLE devices with company IDs for troubleshooting

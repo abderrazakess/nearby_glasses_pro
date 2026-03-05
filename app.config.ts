@@ -29,9 +29,9 @@ const config: ExpoConfig = {
     bundleIdentifier: env.iosBundleId,
     infoPlist: {
       NSBluetoothAlwaysUsageDescription:
-        "Nearby Glasses uses Bluetooth to scan for smart glasses in your vicinity.",
+        "GlassesNearby Pro uses Bluetooth to scan for smart glasses in your vicinity. No location data is collected.",
       NSBluetoothPeripheralUsageDescription:
-        "Nearby Glasses uses Bluetooth to detect nearby smart glasses.",
+        "GlassesNearby Pro uses Bluetooth to detect nearby smart glasses.",
     },
   },
   android: {
@@ -75,7 +75,10 @@ const config: ExpoConfig = {
         isBackgroundEnabled: true,
         modes: ["peripheral", "central"],
         bluetoothAlwaysPermission:
-          "Allow Nearby Glasses to use Bluetooth to detect smart glasses nearby.",
+          "Allow GlassesNearby Pro to use Bluetooth to detect smart glasses nearby. No location data is collected.",
+        // neverForLocation: true allows BLUETOOTH_SCAN without location permission on Android 12+
+        // This is valid because we only use BLE for device detection, not positioning
+        neverForLocation: true,
       },
     ],
     [

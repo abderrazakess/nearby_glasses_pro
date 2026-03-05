@@ -168,6 +168,16 @@ export function useBleScannerSimulated(
  * On native platforms, uses react-native-ble-plx for real BLE scanning.
  * On web/simulator, falls back to a simulated scanner.
  */
+export interface RawBleDevice {
+  id: string;
+  name: string | null;
+  rssi: number;
+  companyIdHex: string | null;
+  companyIdDecimal: number | null;
+  manufacturerDataRaw: string | null;
+  isSmartGlasses: boolean;
+}
+
 export function useBleScanner(
   settings: ScannerSettings,
   onNewDetection: (device: DetectedDevice) => void
@@ -176,8 +186,10 @@ export function useBleScanner(
   const [devices, setDevices] = useState<DetectedDevice[]>([]);
   const [bleState, setBleState] = useState<string>("Unknown");
   const [error, setError] = useState<string | null>(null);
+  const [rawDevices, setRawDevices] = useState<RawBleDevice[]>([]);
   const managerRef = useRef<any>(null);
   const devicesRef = useRef<Map<string, DetectedDevice>>(new Map());
+  const rawDevicesRef = useRef<Map<string, RawBleDevice>>(new Map());
   const cleanupTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const newDetectionsRef = useRef<Set<string>>(new Set());
 
@@ -191,6 +203,12 @@ export function useBleScanner(
       }
     }
     setDevices(Array.from(devicesRef.current.values()).sort((a, b) => b.rssi - a.rssi));
+    // Sync raw devices (keep last 50 for debug)
+    setRawDevices(
+      Array.from(rawDevicesRef.current.values())
+        .sort((a, b) => b.rssi - a.rssi)
+        .slice(0, 50)
+    );
   }, []);
 
   // Handle a detected device (real or simulated)
@@ -240,6 +258,48 @@ export function useBleScanner(
     }
 
     try {
+      // Request Bluetooth permissions on Android 12+ (API 31+)
+      // On older Android, location permission is required for BLE scanning
+      if (Platform.OS === "android") {
+        const { PermissionsAndroid } = await import("react-native");
+        const apiLevel = parseInt(String((Platform as any).Version ?? "0"), 10);
+        if (apiLevel >= 31) {
+          // Android 12+ — request BLUETOOTH_SCAN and BLUETOOTH_CONNECT
+          const results = await PermissionsAndroid.requestMultiple([
+            PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
+            PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
+          ]);
+          const scanGranted =
+            results[PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN] === "granted";
+          if (!scanGranted) {
+            setError(
+              "Bluetooth Scan permission is required. Please grant it in Settings > Apps > GlassesNearby Pro > Permissions."
+            );
+            setIsScanning(false);
+            return;
+          }
+        } else {
+          // Android < 12 — BLE scanning requires location permission
+          const granted = await PermissionsAndroid.request(
+            PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+            {
+              title: "Location Permission Required",
+              message:
+                "On Android 11 and below, Bluetooth scanning requires location permission. GlassesNearby Pro does not use your location.",
+              buttonPositive: "Allow",
+              buttonNegative: "Deny",
+            }
+          );
+          if (granted !== "granted") {
+            setError(
+              "Location permission is required for Bluetooth scanning on Android 11 and below."
+            );
+            setIsScanning(false);
+            return;
+          }
+        }
+      }
+
       // Dynamic import to avoid web crashes
       const { BleManager } = await import("react-native-ble-plx");
       if (!managerRef.current) {
@@ -255,45 +315,70 @@ export function useBleScanner(
       if (state !== "PoweredOn") {
         setError(
           state === "PoweredOff"
-            ? "Bluetooth is turned off. Please enable Bluetooth to scan."
-            : "Bluetooth is not available on this device."
+            ? "Bluetooth is turned off. Please enable Bluetooth and try again."
+            : `Bluetooth is not available (state: ${state}). Please check your device settings.`
         );
         setIsScanning(false);
         return;
       }
 
       // Start scanning for all BLE devices
+      // allowDuplicates: true is critical — we need repeated advertisements to track RSSI
       manager.startDeviceScan(
-        null, // scan all service UUIDs
-        { allowDuplicates: true },
+        null, // scan all service UUIDs (null = all)
+        { allowDuplicates: true, scanMode: 2 }, // scanMode 2 = LOW_LATENCY (most aggressive)
         (err: any, device: any) => {
           if (err) {
-            console.error("BLE scan error:", err);
+            // Error code 601 = scan already in progress, ignore it
+            if (err?.errorCode !== 601) {
+              console.error("BLE scan error:", err?.message ?? err);
+            }
             return;
           }
           if (!device) return;
 
           // Check manufacturer-specific data for smart glasses company IDs
-          const mfData = device.manufacturerData;
-          if (mfData) {
-            const companyId = parseCompanyId(mfData);
-            if (companyId !== null && findSmartGlassesCompany(companyId)) {
-              handleDevice(device.id, companyId, device.rssi ?? -100);
-            }
+          // react-native-ble-plx returns manufacturerData as base64-encoded bytes
+          // First 2 bytes are the company ID in little-endian order
+          const mfData: string | null = device.manufacturerData;
+          const parsedCompanyId = mfData ? parseCompanyId(mfData) : null;
+          const isSmartGlasses =
+            parsedCompanyId !== null && !!findSmartGlassesCompany(parsedCompanyId);
+
+          // Track all raw devices for debug mode
+          rawDevicesRef.current.set(device.id, {
+            id: device.id,
+            name: device.name || device.localName || null,
+            rssi: device.rssi ?? -100,
+            companyIdHex:
+              parsedCompanyId !== null
+                ? `0x${parsedCompanyId.toString(16).toUpperCase().padStart(4, "0")}`
+                : null,
+            companyIdDecimal: parsedCompanyId,
+            manufacturerDataRaw: mfData ?? null,
+            isSmartGlasses,
+          });
+
+          if (isSmartGlasses && parsedCompanyId !== null) {
+            handleDevice(device.id, parsedCompanyId, device.rssi ?? -100);
+            return; // matched by company ID — most reliable, stop here
           }
 
-          // Also check device name for known smart glasses product names
+          // Fallback: match by device name for known smart glasses product names
+          // This catches devices that may advertise under a different company ID
           const name = (device.name || device.localName || "").toLowerCase();
-          const knownNames = [
-            "ray-ban",
-            "rayban",
-            "spectacles",
-            "snap spectacles",
-            "meta glasses",
+          const nameMatches: Array<{ pattern: string; companyId: number }> = [
+            { pattern: "ray-ban", companyId: 0x01ab },
+            { pattern: "rayban", companyId: 0x01ab },
+            { pattern: "meta glasses", companyId: 0x058e },
+            { pattern: "spectacles", companyId: 0x03c2 },
+            { pattern: "snap spectacles", companyId: 0x03c2 },
           ];
-          if (knownNames.some((n) => name.includes(n))) {
-            // Use a placeholder company ID for name-matched devices
-            handleDevice(device.id, 0x058e, device.rssi ?? -100);
+          for (const { pattern, companyId } of nameMatches) {
+            if (name.includes(pattern)) {
+              handleDevice(device.id, companyId, device.rssi ?? -100);
+              break;
+            }
           }
         }
       );
@@ -307,8 +392,10 @@ export function useBleScanner(
   const stopScanning = useCallback(() => {
     setIsScanning(false);
     devicesRef.current.clear();
+    rawDevicesRef.current.clear();
     newDetectionsRef.current.clear();
     setDevices([]);
+    setRawDevices([]);
 
     if (cleanupTimerRef.current) {
       clearInterval(cleanupTimerRef.current);
@@ -354,6 +441,7 @@ export function useBleScanner(
   return {
     isScanning,
     devices,
+    rawDevices,
     bleState,
     error,
     startScanning,

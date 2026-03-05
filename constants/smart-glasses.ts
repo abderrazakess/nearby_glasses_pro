@@ -75,17 +75,31 @@ export function findSmartGlassesCompany(
 
 /**
  * Parse the manufacturer-specific data from a BLE advertisement.
- * The first two bytes (little-endian) are the company identifier.
- * Returns the company ID as a number, or null if data is too short.
+ *
+ * react-native-ble-plx returns manufacturerData as a base64-encoded string.
+ * The first 2 bytes are the company identifier in little-endian order.
+ * e.g. Ray-Ban Stories (0x01AB = 427): bytes[0]=0xAB, bytes[1]=0x01
+ *
+ * Returns the company ID as a number, or null if data is too short/invalid.
  */
 export function parseCompanyId(manufacturerData: string | null): number | null {
-  if (!manufacturerData || manufacturerData.length < 4) return null;
-  // manufacturerData is a base64-encoded byte array
+  if (!manufacturerData || manufacturerData.length === 0) return null;
   try {
-    const bytes = Buffer.from(manufacturerData, "base64");
+    // react-native-ble-plx provides manufacturerData as base64
+    // Use atob (available in React Native's JS engine) or Buffer
+    let bytes: number[];
+    if (typeof atob !== "undefined") {
+      // React Native / browser environment
+      const binary = atob(manufacturerData);
+      bytes = Array.from(binary).map((c) => c.charCodeAt(0));
+    } else {
+      // Node.js / test environment
+      const buf = Buffer.from(manufacturerData, "base64");
+      bytes = Array.from(buf);
+    }
     if (bytes.length < 2) return null;
-    // Company ID is little-endian in the first 2 bytes
-    return bytes[0] | (bytes[1] << 8);
+    // Company ID is little-endian: LSB first, MSB second
+    return (bytes[0] & 0xff) | ((bytes[1] & 0xff) << 8);
   } catch {
     return null;
   }
