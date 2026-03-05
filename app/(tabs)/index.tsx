@@ -112,7 +112,7 @@ export default function ScannerScreen() {
             color={colors.primary}
           />
           <Text style={[styles.headerTitle, { color: colors.foreground }]}>
-            Nearby Glasses
+            GlassesNearby Pro
           </Text>
         </View>
         <View
