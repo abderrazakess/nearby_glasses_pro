@@ -206,11 +206,6 @@ export default function SettingsScreen() {
             right={<IconSymbol name="checkmark.circle.fill" size={18} color={colors.success} />}
           />
           <LinkRow
-            icon="lock.fill"
-            label="Open Source (AGPL-3.0)"
-            url="https://github.com/yjeanrenaud/yj_nearbyglasses"
-          />
-          <LinkRow
             icon="bluetooth"
             label="Bluetooth SIG Assigned Numbers"
             url="https://www.bluetooth.com/specifications/assigned-numbers/"
