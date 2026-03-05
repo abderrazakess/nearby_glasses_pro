@@ -2,7 +2,7 @@
 import "./scripts/load-env.js";
 import type { ExpoConfig } from "expo/config";
 
-const bundleId = "space.manus.nearby.glasses.t20260304182219";
+const bundleId = "space.manus.nearby.glasses.t20260305180109";
 const timestamp = bundleId.split(".").pop()?.replace(/^t/, "") ?? "";
 const schemeFromBundleId = `manus${timestamp}`;
 
@@ -50,8 +50,6 @@ const config: ExpoConfig = {
       "BLUETOOTH_ADMIN",
       "BLUETOOTH_SCAN",
       "BLUETOOTH_CONNECT",
-      "ACCESS_FINE_LOCATION",
-      "ACCESS_COARSE_LOCATION",
     ],
     intentFilters: [
       {
@@ -73,7 +71,7 @@ const config: ExpoConfig = {
       "react-native-ble-plx",
       {
         isBackgroundEnabled: true,
-        modes: ["peripheral", "central"],
+        modes: ["central"],
         bluetoothAlwaysPermission:
           "Allow GlassesNearby Pro to use Bluetooth to detect smart glasses nearby. No location data is collected.",
         // neverForLocation: true allows BLUETOOTH_SCAN without location permission on Android 12+
