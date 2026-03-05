@@ -24,3 +24,4 @@
 - [x] Add scanMode LOW_LATENCY for more aggressive scanning
 - [x] Add Debug tab showing all raw BLE devices with company IDs for troubleshooting
 - [x] Add Meta Quest 3 Bluetooth company identifier to detection database (uses same 0x058E / 0x01AB IDs as Ray-Ban Meta)
+- [x] Write short and long app descriptions with open source and GitHub references
