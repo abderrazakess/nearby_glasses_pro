@@ -364,13 +364,22 @@ export function useBleScanner(
             return; // matched by company ID — most reliable, stop here
           }
 
-          // Fallback: match by device name for known smart glasses product names
-          // This catches devices that may advertise under a different company ID
+          // Fallback: match by device name for known smart glasses/headset product names
+          // This catches devices that may advertise without manufacturer data
           const name = (device.name || device.localName || "").toLowerCase();
           const nameMatches: Array<{ pattern: string; companyId: number }> = [
+            // Ray-Ban glasses
             { pattern: "ray-ban", companyId: 0x01ab },
             { pattern: "rayban", companyId: 0x01ab },
+            // Meta Quest VR headsets (same company IDs as Ray-Ban Meta)
+            { pattern: "quest 3", companyId: 0x058e },
+            { pattern: "quest 2", companyId: 0x058e },
+            { pattern: "quest pro", companyId: 0x058e },
+            { pattern: "meta quest", companyId: 0x058e },
+            { pattern: "oculus quest", companyId: 0x058e },
+            // Meta glasses
             { pattern: "meta glasses", companyId: 0x058e },
+            // Snap Spectacles
             { pattern: "spectacles", companyId: 0x03c2 },
             { pattern: "snap spectacles", companyId: 0x03c2 },
           ];

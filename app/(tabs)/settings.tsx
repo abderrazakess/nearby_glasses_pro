@@ -225,8 +225,8 @@ export default function SettingsScreen() {
         {/* Company IDs Reference */}
         <SettingsSection title="MONITORED COMPANY IDs">
           {[
-            { id: "0x058E", name: "Meta Platforms Technologies", products: "Ray-Ban Meta" },
-            { id: "0x01AB", name: "Meta Platforms, Inc.", products: "Ray-Ban Stories" },
+            { id: "0x058E", name: "Meta Platforms Technologies", products: "Ray-Ban Meta · Quest 3 / 3S / Pro" },
+            { id: "0x01AB", name: "Meta Platforms, Inc.", products: "Ray-Ban Stories · Quest 2 / 3" },
             { id: "0x0D53", name: "Luxottica Group S.p.A", products: "Ray-Ban frames" },
             { id: "0x03C2", name: "Snap Inc.", products: "Spectacles" },
           ].map((company, i, arr) => (
