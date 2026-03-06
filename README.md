@@ -119,20 +119,9 @@ GlassesNearby Pro is a refined take on the concept pioneered by **[yj_nearbyglas
 ### Download
 > 🔜 **Coming soon** to the **App Store** and **Google Play**
 
-In the meantime, you can build from source:
+In the meantime, you can download from here:
 
-```bash
-# Clone the repo
-git clone https://github.com/YOUR_USERNAME/GlassesNearbyPro.git
-
-cd GlassesNearbyPro
-
-# Install dependencies
-npm install   # or: flutter pub get
-
-# Run on device
-npm run ios   # or: flutter run
-```
+https://github.com/abderrazakess/nearby_glasses_pro/releases/download/v1.0/nearby_glasses-v1_0_9.apk
 
 ---
 
