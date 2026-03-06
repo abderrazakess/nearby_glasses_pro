@@ -2,7 +2,7 @@
 import "./scripts/load-env.js";
 import type { ExpoConfig } from "expo/config";
 
-const bundleId = "space.manus.nearby.glasses.t20260305180109";
+const bundleId = "space.manus.nearby.glasses.t20260304182219";
 const timestamp = bundleId.split(".").pop()?.replace(/^t/, "") ?? "";
 const schemeFromBundleId = `manus${timestamp}`;
 
