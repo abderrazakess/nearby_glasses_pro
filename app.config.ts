@@ -18,7 +18,6 @@ const env = {
 const config: ExpoConfig = {
   name: env.appName,
   slug: env.appSlug,
-  version: "1.0.02",
   orientation: "portrait",
   icon: "./assets/images/icon.png",
   scheme: env.scheme,
@@ -35,12 +34,11 @@ const config: ExpoConfig = {
     },
   },
   android: {
+<<<<<<< HEAD
     versionCode: 10002,
+=======
+>>>>>>> user_github/main
     adaptiveIcon: {
-      backgroundColor: "#0D1117",
-      foregroundImage: "./assets/images/android-icon-foreground.png",
-      backgroundImage: "./assets/images/android-icon-background.png",
-      monochromeImage: "./assets/images/android-icon-monochrome.png",
     },
     edgeToEdgeEnabled: true,
     predictiveBackGestureEnabled: false,
