@@ -35,10 +35,7 @@ const config: ExpoConfig = {
     },
   },
   android: {
-<<<<<<< HEAD
     versionCode: 10002,
-=======
->>>>>>> user_github/main
     adaptiveIcon: {
       backgroundColor: "#0D1117",
       foregroundImage: "./assets/images/android-icon-foreground.png",
