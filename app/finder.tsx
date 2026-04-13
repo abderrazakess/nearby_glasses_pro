@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef } from "react";
 import {
   Dimensions,
   Platform,
@@ -27,8 +27,9 @@ import { proximityToColor, proximityToLabel } from "@/lib/kalman-filter";
 import type { ProximityLevel } from "@/lib/kalman-filter";
 import { useBleScannerContext } from "@/hooks/use-ble-scanner-context";
 
-const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window");
+const { width: SCREEN_W } = Dimensions.get("window");
 const RING_COUNT = 4;
+const RADAR_SIZE = Math.min(SCREEN_W * 0.78, 300);
 
 // ─── Proximity ring pulse speeds ─────────────────────────────────────────────
 function pulseDuration(proximity: ProximityLevel): number {
@@ -41,7 +42,7 @@ function pulseDuration(proximity: ProximityLevel): number {
   }
 }
 
-// ─── Haptic feedback scheduler ───────────────────────────────────────────────
+// ─── Haptic feedback style ───────────────────────────────────────────────────
 function hapticStyle(proximity: ProximityLevel): Haptics.ImpactFeedbackStyle {
   switch (proximity) {
     case "RIGHT_HERE": return Haptics.ImpactFeedbackStyle.Heavy;
@@ -50,7 +51,7 @@ function hapticStyle(proximity: ProximityLevel): Haptics.ImpactFeedbackStyle {
   }
 }
 
-// ─── Proximity Ring Component ─────────────────────────────────────────────────
+// ─── Proximity Ring ───────────────────────────────────────────────────────────
 function ProximityRing({
   index,
   color,
@@ -96,7 +97,7 @@ function ProximityRing({
     opacity: opacity.value,
   }));
 
-  const size = 180 + index * 50;
+  const size = RADAR_SIZE * (0.4 + index * 0.2);
   return (
     <Animated.View
       style={[
@@ -115,7 +116,7 @@ function ProximityRing({
   );
 }
 
-// ─── Arrow Component ──────────────────────────────────────────────────────────
+// ─── Directional Arrow ────────────────────────────────────────────────────────
 function DirectionalArrow({
   bearing,
   azimuth,
@@ -129,16 +130,13 @@ function DirectionalArrow({
   color: string;
   signalLost: boolean;
 }) {
-  // The arrow should point toward the target bearing relative to current azimuth
-  const relativeAngle = ((bearing - azimuth + 360) % 360);
+  const relativeAngle = (bearing - azimuth + 360) % 360;
   const rotation = useSharedValue(relativeAngle);
   const arrowOpacity = useSharedValue(signalLost ? 0.3 : 1);
   const arrowScale = useSharedValue(hasDirection ? 1 : 0.7);
 
   useEffect(() => {
-    // Smooth rotation with spring
     let target = relativeAngle;
-    // Avoid spinning the long way around
     const current = rotation.value % 360;
     let diff = target - current;
     if (diff > 180) diff -= 360;
@@ -165,7 +163,6 @@ function DirectionalArrow({
 
   return (
     <Animated.View style={[styles.arrowContainer, animStyle]}>
-      {/* Arrow SVG-like shape using Views */}
       <View style={[styles.arrowHead, { borderBottomColor: color }]} />
       <View style={[styles.arrowShaft, { backgroundColor: color }]} />
     </Animated.View>
@@ -174,7 +171,6 @@ function DirectionalArrow({
 
 // ─── Signal Strength Bar ──────────────────────────────────────────────────────
 function SignalBar({ rssi, color }: { rssi: number; color: string }) {
-  // Map RSSI (-100 to -40) to 0-1
   const pct = Math.max(0, Math.min(1, (rssi + 100) / 60));
   const width = useSharedValue(pct);
 
@@ -208,15 +204,11 @@ export default function FinderScreen() {
   const deviceName = params.deviceName ?? "Unknown Device";
   const initialRssi = parseInt(params.rssi ?? "-80", 10);
 
-  // Get live RSSI from BLE scanner context
   const { devices } = useBleScannerContext();
   const liveDevice = devices.find((d) => d.id === deviceId);
   const currentRssi = liveDevice?.rssi ?? initialRssi;
 
-  // Sensor orientation
   const orientation = useSensorOrientation(true);
-
-  // Direction finder
   const finder = useRssiDirectionFinder(
     deviceId,
     currentRssi,
@@ -227,7 +219,7 @@ export default function FinderScreen() {
   const accentColor = proximityToColor(finder.proximity);
   const pulseMs = pulseDuration(finder.proximity);
 
-  // Background gradient color (simulated with a tinted overlay)
+  // Background tint overlay
   const bgOpacity = useSharedValue(0.15);
   useEffect(() => {
     bgOpacity.value = withTiming(finder.signalLost ? 0.05 : 0.18, { duration: 600 });
@@ -237,7 +229,7 @@ export default function FinderScreen() {
     backgroundColor: accentColor,
   }));
 
-  // Haptic feedback scheduler
+  // Haptic feedback
   const hapticTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scheduleHaptic = useCallback(() => {
     if (Platform.OS === "web") return;
@@ -260,11 +252,16 @@ export default function FinderScreen() {
       : `${finder.distanceMetres.toFixed(1)} m`;
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View
+      style={[
+        styles.container,
+        { paddingTop: insets.top, paddingBottom: insets.bottom + 8 },
+      ]}
+    >
       {/* Tinted background overlay */}
       <Animated.View style={[StyleSheet.absoluteFillObject, bgStyle]} />
 
-      {/* Header */}
+      {/* ── Header ── */}
       <View style={styles.header}>
         <Pressable
           onPress={() => router.back()}
@@ -283,89 +280,95 @@ export default function FinderScreen() {
             </Text>
           </View>
         </View>
+        {/* Spacer to balance the back button */}
         <View style={styles.backBtn} />
       </View>
 
-      {/* Proximity rings + arrow */}
-      <View style={styles.radarArea}>
-        {/* Rings */}
-        {Array.from({ length: RING_COUNT }).map((_, i) => (
-          <ProximityRing
-            key={i}
-            index={i}
+      {/* ── Center: Radar + Labels ── */}
+      <View style={styles.centerSection}>
+        {/* Radar area */}
+        <View style={styles.radarArea}>
+          {Array.from({ length: RING_COUNT }).map((_, i) => (
+            <ProximityRing
+              key={i}
+              index={i}
+              color={accentColor}
+              pulseDur={pulseMs}
+            />
+          ))}
+          <DirectionalArrow
+            bearing={finder.targetBearing}
+            azimuth={orientation.azimuth}
+            hasDirection={finder.hasDirection}
             color={accentColor}
-            pulseDur={pulseMs}
+            signalLost={finder.signalLost}
           />
-        ))}
+          <View style={[styles.centerDot, { backgroundColor: accentColor }]} />
+        </View>
 
-        {/* Arrow */}
-        <DirectionalArrow
-          bearing={finder.targetBearing}
-          azimuth={orientation.azimuth}
-          hasDirection={finder.hasDirection}
-          color={accentColor}
-          signalLost={finder.signalLost}
-        />
+        {/* Proximity label */}
+        <Text style={[styles.proximityLabel, { color: accentColor }]}>
+          {proximityToLabel(finder.proximity)}
+        </Text>
 
-        {/* Center dot */}
-        <View style={[styles.centerDot, { backgroundColor: accentColor }]} />
+        {/* Distance estimate */}
+        <Text style={styles.distanceText}>
+          {finder.signalLost ? "—" : distanceLabel}
+        </Text>
       </View>
 
-      {/* Proximity label */}
-      <Text style={[styles.proximityLabel, { color: accentColor }]}>
-        {proximityToLabel(finder.proximity)}
-      </Text>
-
-      {/* Distance */}
-      <Text style={styles.distanceText}>
-        {finder.signalLost ? "—" : distanceLabel}
-      </Text>
-
-      {/* Signal strength bar */}
-      <View style={styles.signalSection}>
-        <View style={styles.signalRow}>
-          <Text style={styles.signalLabel}>Signal</Text>
-          <Text style={styles.signalValue}>{finder.smoothedRssi} dBm</Text>
+      {/* ── Bottom: Signal bar + hints ── */}
+      <View style={styles.bottomSection}>
+        {/* Signal strength bar */}
+        <View style={styles.signalSection}>
+          <View style={styles.signalRow}>
+            <Text style={styles.signalLabel}>Signal</Text>
+            <Text style={styles.signalValue}>{finder.smoothedRssi} dBm</Text>
+          </View>
+          <SignalBar rssi={finder.smoothedRssi} color={accentColor} />
         </View>
-        <SignalBar rssi={finder.smoothedRssi} color={accentColor} />
+
+        {/* Calibration hint */}
+        {!finder.hasDirection && !finder.signalLost && (
+          <View style={styles.hintBox}>
+            <Text style={styles.hintText}>
+              Slowly rotate your phone to map the signal direction…
+            </Text>
+          </View>
+        )}
+
+        {/* Direction confidence */}
+        {finder.hasDirection && (
+          <View style={styles.hintBox}>
+            <Text style={styles.hintText}>
+              Arrow points toward strongest signal •{" "}
+              {Math.round(finder.confidence * 100)}% confidence
+            </Text>
+          </View>
+        )}
+
+        {/* Sensor unavailable warning */}
+        {!orientation.available && Platform.OS !== "web" && (
+          <View style={styles.sensorWarning}>
+            <Text style={styles.sensorWarningText}>
+              Motion sensors unavailable — direction finding disabled
+            </Text>
+          </View>
+        )}
       </View>
-
-      {/* Direction confidence */}
-      {!finder.hasDirection && !finder.signalLost && (
-        <View style={styles.hintBox}>
-          <Text style={styles.hintText}>
-            Slowly rotate your phone to map the signal direction…
-          </Text>
-        </View>
-      )}
-
-      {finder.hasDirection && (
-        <View style={styles.hintBox}>
-          <Text style={styles.hintText}>
-            Arrow points toward strongest signal •{" "}
-            {Math.round(finder.confidence * 100)}% confidence
-          </Text>
-        </View>
-      )}
-
-      {/* Sensor status */}
-      {!orientation.available && Platform.OS !== "web" && (
-        <View style={styles.sensorWarning}>
-          <Text style={styles.sensorWarningText}>
-            Motion sensors unavailable — direction finding disabled
-          </Text>
-        </View>
-      )}
     </View>
   );
 }
 
+// ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#0D1117",
     alignItems: "center",
+    justifyContent: "space-between",
   },
+  // ── Header ──
   header: {
     width: "100%",
     flexDirection: "row",
@@ -408,12 +411,18 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "600",
   },
-  radarArea: {
-    width: SCREEN_W * 0.85,
-    height: SCREEN_W * 0.85,
+  // ── Center section ──
+  centerSection: {
+    flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 16,
+    gap: 8,
+  },
+  radarArea: {
+    width: RADAR_SIZE,
+    height: RADAR_SIZE,
+    alignItems: "center",
+    justifyContent: "center",
   },
   ring: {
     position: "absolute",
@@ -429,16 +438,16 @@ const styles = StyleSheet.create({
   arrowHead: {
     width: 0,
     height: 0,
-    borderLeftWidth: 28,
-    borderRightWidth: 28,
-    borderBottomWidth: 56,
+    borderLeftWidth: 24,
+    borderRightWidth: 24,
+    borderBottomWidth: 48,
     borderLeftColor: "transparent",
     borderRightColor: "transparent",
     borderBottomColor: "#EF4444",
   },
   arrowShaft: {
-    width: 16,
-    height: 60,
+    width: 14,
+    height: 52,
     backgroundColor: "#EF4444",
     borderBottomLeftRadius: 4,
     borderBottomRightRadius: 4,
@@ -452,20 +461,27 @@ const styles = StyleSheet.create({
     zIndex: 20,
   },
   proximityLabel: {
-    fontSize: 36,
+    fontSize: 34,
     fontWeight: "800",
-    marginTop: 16,
     letterSpacing: 1,
+    textAlign: "center",
   },
   distanceText: {
     color: "#9BA1A6",
     fontSize: 18,
     fontWeight: "500",
-    marginTop: 4,
+    textAlign: "center",
+  },
+  // ── Bottom section ──
+  bottomSection: {
+    width: "100%",
+    alignItems: "center",
+    paddingHorizontal: 24,
+    gap: 12,
+    paddingBottom: 8,
   },
   signalSection: {
-    width: "80%",
-    marginTop: 20,
+    width: "100%",
   },
   signalRow: {
     flexDirection: "row",
@@ -496,12 +512,11 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   hintBox: {
-    marginTop: 16,
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
     paddingVertical: 10,
     backgroundColor: "rgba(255,255,255,0.05)",
     borderRadius: 12,
-    marginHorizontal: 24,
+    width: "100%",
   },
   hintText: {
     color: "#9BA1A6",
@@ -510,12 +525,11 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   sensorWarning: {
-    marginTop: 12,
     paddingHorizontal: 20,
     paddingVertical: 8,
     backgroundColor: "rgba(239,68,68,0.12)",
     borderRadius: 10,
-    marginHorizontal: 24,
+    width: "100%",
   },
   sensorWarningText: {
     color: "#F87171",

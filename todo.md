@@ -36,3 +36,4 @@
 - [x] Add expo-sensors plugin to app.config.ts for motion sensor permissions
 - [x] Add BleScannerProvider context for live RSSI sharing to FinderScreen
 - [x] Verify and update detection for all Meta glasses models (Gen 1, Gen 2, Gen 3 Oakley, Blayzer, Scriber, Display)
+- [x] Fix Finder screen layout centering
