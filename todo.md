@@ -38,3 +38,15 @@
 - [x] Verify and update detection for all Meta glasses models (Gen 1, Gen 2, Gen 3 Oakley, Blayzer, Scriber, Display)
 - [x] Fix Finder screen layout centering
 - [x] Add Samsung Galaxy Buds 3 Pro to detection database (0x0075 — also covers Buds 3, Buds 2 Pro, Buds Pro, Buds Live)
+- [ ] Upgrade direction estimator: angular bins (10°), Gaussian smoothing, parabolic interpolation, confidence score
+- [ ] Add EMA secondary smoothing (alpha=0.3) on top of Kalman output
+- [ ] Add exponential decay on old direction samples (half-life ~5s)
+- [ ] Build calibration overlay: rotating phone animation, 0-360° progress arc, auto-dismiss at confidence 0.5
+- [ ] Implement signal loss handling: 3s hold, freeze arrow at 50% opacity, haptics stop, resume on reconnect
+- [ ] Add audio feedback system: 880Hz beep, interval scales with distance, respects silent mode
+- [ ] Polish arrow: chevron SVG shape, drop shadow, outer glow matching proximity color, spring animation
+- [ ] Polish proximity rings: pulse speed scales with distance, opacity fade, color matches arrow
+- [ ] Polish background: radial gradient shifting blue→green→orange→red with proximity
+- [ ] Add guidance text: dynamic instructions based on confidence + proximity zone
+- [ ] Add HIGH_SAMPLING_RATE_SENSORS and WAKE_LOCK permissions to app.config.ts
+- [ ] Add accuracy limitation tooltip on first use

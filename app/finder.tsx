@@ -1,9 +1,10 @@
-import React, { useCallback, useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Dimensions,
   Platform,
   Pressable,
   StyleSheet,
+  Switch,
   Text,
   View,
 } from "react-native";
@@ -20,18 +21,26 @@ import Animated, {
 } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { useSensorOrientation } from "@/hooks/use-sensor-orientation";
 import { useRssiDirectionFinder } from "@/hooks/use-rssi-direction-finder";
-import { proximityToColor, proximityToLabel } from "@/lib/kalman-filter";
-import type { ProximityLevel } from "@/lib/kalman-filter";
+import { useFinderAudio } from "@/hooks/use-finder-audio";
+import {
+  proximityToColor,
+  proximityToBgColor,
+  proximityToLabel,
+  type ProximityLevel,
+} from "@/lib/kalman-filter";
 import { useBleScannerContext } from "@/hooks/use-ble-scanner-context";
+import { CalibrationOverlay } from "@/components/calibration-overlay";
 
 const { width: SCREEN_W } = Dimensions.get("window");
 const RING_COUNT = 4;
 const RADAR_SIZE = Math.min(SCREEN_W * 0.78, 300);
+const CALIBRATION_SEEN_KEY = "finder_calibration_seen";
 
-// ─── Proximity ring pulse speeds ─────────────────────────────────────────────
+// ─── Proximity ring pulse duration ───────────────────────────────────────────
 function pulseDuration(proximity: ProximityLevel): number {
   switch (proximity) {
     case "RIGHT_HERE": return 300;
@@ -56,16 +65,25 @@ function ProximityRing({
   index,
   color,
   pulseDur,
+  signalLost,
 }: {
   index: number;
   color: string;
   pulseDur: number;
+  signalLost: boolean;
 }) {
   const scale = useSharedValue(0.4 + index * 0.18);
   const opacity = useSharedValue(0.6 - index * 0.12);
-  const delay = index * (pulseDur / RING_COUNT);
 
   useEffect(() => {
+    if (signalLost) {
+      cancelAnimation(scale);
+      cancelAnimation(opacity);
+      scale.value = withTiming(0.4 + index * 0.18, { duration: 400 });
+      opacity.value = withTiming(0.15, { duration: 400 });
+      return;
+    }
+    const delay = index * (pulseDur / RING_COUNT);
     const dur = pulseDur + delay;
     scale.value = withRepeat(
       withSequence(
@@ -90,7 +108,7 @@ function ProximityRing({
       cancelAnimation(scale);
       cancelAnimation(opacity);
     };
-  }, [pulseDur, color]);
+  }, [pulseDur, color, signalLost]);
 
   const animStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
@@ -132,8 +150,8 @@ function DirectionalArrow({
 }) {
   const relativeAngle = (bearing - azimuth + 360) % 360;
   const rotation = useSharedValue(relativeAngle);
-  const arrowOpacity = useSharedValue(signalLost ? 0.3 : 1);
-  const arrowScale = useSharedValue(hasDirection ? 1 : 0.7);
+  const arrowOpacity = useSharedValue(signalLost ? 0.35 : 1);
+  const arrowScale = useSharedValue(hasDirection ? 1 : 0.65);
 
   useEffect(() => {
     let target = relativeAngle;
@@ -149,8 +167,8 @@ function DirectionalArrow({
   }, [relativeAngle]);
 
   useEffect(() => {
-    arrowOpacity.value = withTiming(signalLost ? 0.3 : 1, { duration: 400 });
-    arrowScale.value = withSpring(hasDirection ? 1 : 0.7, { damping: 12 });
+    arrowOpacity.value = withTiming(signalLost ? 0.35 : 1, { duration: 400 });
+    arrowScale.value = withSpring(hasDirection ? 1 : 0.65, { damping: 12 });
   }, [signalLost, hasDirection]);
 
   const animStyle = useAnimatedStyle(() => ({
@@ -161,9 +179,22 @@ function DirectionalArrow({
     opacity: arrowOpacity.value,
   }));
 
+  // Glow shadow effect via shadow props
   return (
     <Animated.View style={[styles.arrowContainer, animStyle]}>
+      {/* Glow layer */}
+      <View
+        style={[
+          styles.arrowGlow,
+          {
+            shadowColor: color,
+            borderBottomColor: color + "40",
+          },
+        ]}
+      />
+      {/* Arrow head */}
       <View style={[styles.arrowHead, { borderBottomColor: color }]} />
+      {/* Arrow shaft */}
       <View style={[styles.arrowShaft, { backgroundColor: color }]} />
     </Animated.View>
   );
@@ -186,6 +217,22 @@ function SignalBar({ rssi, color }: { rssi: number; color: string }) {
   return (
     <View style={styles.signalBarTrack}>
       <Animated.View style={[styles.signalBarFill, barStyle]} />
+    </View>
+  );
+}
+
+// ─── Confidence Bar ───────────────────────────────────────────────────────────
+function ConfidenceBar({ confidence }: { confidence: number }) {
+  const width = useSharedValue(confidence);
+  useEffect(() => {
+    width.value = withTiming(confidence, { duration: 300 });
+  }, [confidence]);
+  const barStyle = useAnimatedStyle(() => ({
+    width: `${width.value * 100}%`,
+  }));
+  return (
+    <View style={styles.confBarBg}>
+      <Animated.View style={[styles.confBarFill, barStyle]} />
     </View>
   );
 }
@@ -217,20 +264,46 @@ export default function FinderScreen() {
   );
 
   const accentColor = proximityToColor(finder.proximity);
+  const bgColor = proximityToBgColor(finder.proximity);
   const pulseMs = pulseDuration(finder.proximity);
 
-  // Background tint overlay
+  // ── Calibration overlay ──────────────────────────────────────────────────
+  const [showCalibration, setShowCalibration] = useState(false);
+  useEffect(() => {
+    AsyncStorage.getItem(CALIBRATION_SEEN_KEY).then((seen) => {
+      if (!seen) setShowCalibration(true);
+    });
+  }, []);
+  const dismissCalibration = useCallback(() => {
+    setShowCalibration(false);
+    AsyncStorage.setItem(CALIBRATION_SEEN_KEY, "1");
+  }, []);
+
+  // ── Audio toggle ─────────────────────────────────────────────────────────
+  const [audioEnabled, setAudioEnabled] = useState(false);
+  const { initAudio } = useFinderAudio(finder.proximity, audioEnabled, finder.signalLost);
+  const handleAudioToggle = useCallback(
+    (val: boolean) => {
+      if (val) initAudio();
+      setAudioEnabled(val);
+    },
+    [initAudio],
+  );
+
+  // ── Background tint ──────────────────────────────────────────────────────
   const bgOpacity = useSharedValue(0.15);
   useEffect(() => {
-    bgOpacity.value = withTiming(finder.signalLost ? 0.05 : 0.18, { duration: 600 });
+    bgOpacity.value = withTiming(finder.signalLost ? 0.04 : 0.18, { duration: 600 });
   }, [finder.signalLost]);
   const bgStyle = useAnimatedStyle(() => ({
     opacity: bgOpacity.value,
-    backgroundColor: accentColor,
+    backgroundColor: bgColor,
   }));
 
-  // Haptic feedback
+  // ── Haptic feedback ──────────────────────────────────────────────────────
   const hapticTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const prevProximityRef = useRef<ProximityLevel>(finder.proximity);
+
   const scheduleHaptic = useCallback(() => {
     if (Platform.OS === "web") return;
     if (finder.signalLost || finder.proximity === "FAR") return;
@@ -240,16 +313,28 @@ export default function FinderScreen() {
 
   useEffect(() => {
     if (hapticTimerRef.current) clearTimeout(hapticTimerRef.current);
+    // "Reconnected" bump when signal returns
+    if (
+      prevProximityRef.current === "LOST" &&
+      finder.proximity !== "LOST" &&
+      Platform.OS !== "web"
+    ) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+    prevProximityRef.current = finder.proximity;
     hapticTimerRef.current = setTimeout(scheduleHaptic, pulseMs);
     return () => {
       if (hapticTimerRef.current) clearTimeout(hapticTimerRef.current);
     };
   }, [finder.proximity, pulseMs]);
 
+  // ── Distance label ───────────────────────────────────────────────────────
   const distanceLabel =
     finder.distanceMetres < 1
       ? `${Math.round(finder.distanceMetres * 100)} cm`
       : `${finder.distanceMetres.toFixed(1)} m`;
+
+  const confidencePct = Math.round(finder.confidence * 100);
 
   return (
     <View
@@ -280,8 +365,17 @@ export default function FinderScreen() {
             </Text>
           </View>
         </View>
-        {/* Spacer to balance the back button */}
-        <View style={styles.backBtn} />
+        {/* Audio toggle */}
+        <View style={styles.audioToggle}>
+          <Text style={styles.audioLabel}>🔊</Text>
+          <Switch
+            value={audioEnabled}
+            onValueChange={handleAudioToggle}
+            trackColor={{ false: "#334155", true: "#EF4444" }}
+            thumbColor="#ECEDEE"
+            style={{ transform: [{ scale: 0.75 }] }}
+          />
+        </View>
       </View>
 
       {/* ── Center: Radar + Labels ── */}
@@ -294,6 +388,7 @@ export default function FinderScreen() {
               index={i}
               color={accentColor}
               pulseDur={pulseMs}
+              signalLost={finder.signalLost}
             />
           ))}
           <DirectionalArrow
@@ -328,24 +423,19 @@ export default function FinderScreen() {
           <SignalBar rssi={finder.smoothedRssi} color={accentColor} />
         </View>
 
-        {/* Calibration hint */}
-        {!finder.hasDirection && !finder.signalLost && (
-          <View style={styles.hintBox}>
-            <Text style={styles.hintText}>
-              Slowly rotate your phone to map the signal direction…
-            </Text>
+        {/* Direction confidence bar */}
+        <View style={styles.signalSection}>
+          <View style={styles.signalRow}>
+            <Text style={styles.signalLabel}>Direction Confidence</Text>
+            <Text style={styles.signalValue}>{confidencePct}%</Text>
           </View>
-        )}
+          <ConfidenceBar confidence={finder.confidence} />
+        </View>
 
-        {/* Direction confidence */}
-        {finder.hasDirection && (
-          <View style={styles.hintBox}>
-            <Text style={styles.hintText}>
-              Arrow points toward strongest signal •{" "}
-              {Math.round(finder.confidence * 100)}% confidence
-            </Text>
-          </View>
-        )}
+        {/* Dynamic guidance text */}
+        <View style={styles.hintBox}>
+          <Text style={styles.hintText}>{finder.guidanceText}</Text>
+        </View>
 
         {/* Sensor unavailable warning */}
         {!orientation.available && Platform.OS !== "web" && (
@@ -355,7 +445,27 @@ export default function FinderScreen() {
             </Text>
           </View>
         )}
+
+        {/* Recalibrate button */}
+        <Pressable
+          onPress={() => setShowCalibration(true)}
+          style={({ pressed }) => [
+            styles.recalibrateBtn,
+            pressed && { opacity: 0.7 },
+          ]}
+        >
+          <Text style={styles.recalibrateBtnText}>Recalibrate</Text>
+        </Pressable>
       </View>
+
+      {/* ── Calibration overlay ── */}
+      {showCalibration && (
+        <CalibrationOverlay
+          angularCoverage={finder.angularCoverage}
+          confidence={finder.confidence}
+          onDismiss={dismissCalibration}
+        />
+      )}
     </View>
   );
 }
@@ -411,6 +521,16 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "600",
   },
+  audioToggle: {
+    width: 64,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    gap: 2,
+  },
+  audioLabel: {
+    fontSize: 14,
+  },
   // ── Center section ──
   centerSection: {
     flex: 1,
@@ -435,19 +555,32 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     zIndex: 10,
   },
+  arrowGlow: {
+    position: "absolute",
+    width: 0,
+    height: 0,
+    borderLeftWidth: 30,
+    borderRightWidth: 30,
+    borderBottomWidth: 60,
+    borderLeftColor: "transparent",
+    borderRightColor: "transparent",
+    shadowRadius: 16,
+    shadowOpacity: 0.8,
+    shadowOffset: { width: 0, height: 0 },
+  },
   arrowHead: {
     width: 0,
     height: 0,
-    borderLeftWidth: 24,
-    borderRightWidth: 24,
-    borderBottomWidth: 48,
+    borderLeftWidth: 22,
+    borderRightWidth: 22,
+    borderBottomWidth: 44,
     borderLeftColor: "transparent",
     borderRightColor: "transparent",
     borderBottomColor: "#EF4444",
   },
   arrowShaft: {
-    width: 14,
-    height: 52,
+    width: 12,
+    height: 48,
     backgroundColor: "#EF4444",
     borderBottomLeftRadius: 4,
     borderBottomRightRadius: 4,
@@ -461,7 +594,7 @@ const styles = StyleSheet.create({
     zIndex: 20,
   },
   proximityLabel: {
-    fontSize: 34,
+    fontSize: 32,
     fontWeight: "800",
     letterSpacing: 1,
     textAlign: "center",
@@ -477,7 +610,7 @@ const styles = StyleSheet.create({
     width: "100%",
     alignItems: "center",
     paddingHorizontal: 24,
-    gap: 12,
+    gap: 10,
     paddingBottom: 8,
   },
   signalSection: {
@@ -486,23 +619,22 @@ const styles = StyleSheet.create({
   signalRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 6,
+    marginBottom: 5,
   },
   signalLabel: {
     color: "#9BA1A6",
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "600",
     textTransform: "uppercase",
     letterSpacing: 0.8,
   },
   signalValue: {
     color: "#ECEDEE",
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "600",
-    fontVariant: ["tabular-nums"],
   },
   signalBarTrack: {
-    height: 6,
+    height: 5,
     backgroundColor: "#1E2022",
     borderRadius: 3,
     overflow: "hidden",
@@ -511,8 +643,19 @@ const styles = StyleSheet.create({
     height: "100%",
     borderRadius: 3,
   },
+  confBarBg: {
+    height: 5,
+    backgroundColor: "#1E2022",
+    borderRadius: 3,
+    overflow: "hidden",
+  },
+  confBarFill: {
+    height: "100%",
+    backgroundColor: "#EF4444",
+    borderRadius: 3,
+  },
   hintBox: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingVertical: 10,
     backgroundColor: "rgba(255,255,255,0.05)",
     borderRadius: 12,
@@ -525,7 +668,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   sensorWarning: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingVertical: 8,
     backgroundColor: "rgba(239,68,68,0.12)",
     borderRadius: 10,
@@ -535,5 +678,17 @@ const styles = StyleSheet.create({
     color: "#F87171",
     fontSize: 12,
     textAlign: "center",
+  },
+  recalibrateBtn: {
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#334155",
+  },
+  recalibrateBtnText: {
+    color: "#9BA1A6",
+    fontSize: 13,
+    fontWeight: "600",
   },
 });

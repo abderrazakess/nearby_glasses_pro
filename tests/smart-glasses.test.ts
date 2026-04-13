@@ -10,7 +10,7 @@ import {
 
 describe("Smart Glasses Company IDs", () => {
   it("should have 4 known companies", () => {
-    expect(SMART_GLASSES_COMPANIES).toHaveLength(4);
+    expect(SMART_GLASSES_COMPANIES).toHaveLength(5);
   });
 
   it("should find Meta Platforms Technologies by ID 0x058E", () => {
@@ -29,7 +29,7 @@ describe("Smart Glasses Company IDs", () => {
   it("should find Luxottica by ID 0x0D53", () => {
     const company = findSmartGlassesCompany(0x0d53);
     expect(company).toBeDefined();
-    expect(company?.shortName).toBe("Luxottica");
+    expect(company?.shortName).toBe("EssilorLuxottica");
   });
 
   it("should find Snap Inc by ID 0x03C2", () => {
