@@ -15,6 +15,7 @@
  *  Gen 3  Oakley Meta HSTN, Vanguard                          → 0x0D53 + 0x058E
  *  Quest  Meta Quest 2, 3, 3S, Pro                            → 0x058E + 0x01AB
  *  Snap   Spectacles 3, 4, 5                                  → 0x03C2
+ *  Samsung Galaxy Buds 3 Pro, Buds 2 Pro, Buds Pro              → 0x0075
  */
 
 export interface SmartGlassesCompany {
@@ -103,6 +104,24 @@ export const SMART_GLASSES_COMPANIES: SmartGlassesCompany[] = [
     shortName: "Snapchat",
     products: ["Spectacles 3", "Spectacles 4", "Spectacles 5"],
     falsePositiveNote: "Snap Spectacles AR glasses",
+  },
+  {
+    id: "0x0075",
+    numericId: 0x0075,
+    name: "Samsung Electronics Co. Ltd.",
+    shortName: "Samsung",
+    products: [
+      // Galaxy Buds with open-ear / AI audio features
+      "Galaxy Buds 3 Pro",
+      "Galaxy Buds 3",
+      "Galaxy Buds 2 Pro",
+      "Galaxy Buds 2",
+      "Galaxy Buds Pro",
+      "Galaxy Buds Live",
+      "Galaxy Buds+",
+    ],
+    falsePositiveNote:
+      "0x0075 is Samsung's primary BLE company ID — used by all Galaxy Buds, Galaxy Watch, and Galaxy Ring. May trigger on any Samsung wearable nearby.",
   },
 ];
 

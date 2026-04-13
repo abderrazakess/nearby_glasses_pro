@@ -229,6 +229,7 @@ export default function SettingsScreen() {
             { id: "0x01AB", name: "Meta Platforms, Inc.", products: "Ray-Ban Stories Gen 1 (Wayfarer/Round/Meteor) · Ray-Ban Meta Gen 2 · Blayzer · Scriber · Meta Display · Quest 2/3" },
             { id: "0x0D53", name: "EssilorLuxottica S.A.", products: "Oakley Meta HSTN · Oakley Meta Vanguard · Ray-Ban Meta frames" },
             { id: "0x03C2", name: "Snap Inc.", products: "Spectacles 3 · Spectacles 4 · Spectacles 5" },
+            { id: "0x0075", name: "Samsung Electronics Co. Ltd.", products: "Galaxy Buds 3 Pro · Galaxy Buds 3 · Galaxy Buds 2 Pro · Galaxy Buds Pro · Galaxy Buds Live" },
           ].map((company, i, arr) => (
             <View
               key={company.id}
