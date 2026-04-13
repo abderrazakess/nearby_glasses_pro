@@ -6,6 +6,15 @@
  *
  * Source: https://www.bluetooth.com/specifications/assigned-numbers/
  * Reference: https://github.com/yjeanrenaud/yj_nearbyglasses
+ *
+ * Detection coverage:
+ *  Gen 1  Ray-Ban Stories (Wayfarer, Round, Meteor)           → 0x01AB
+ *  Gen 2  Ray-Ban Meta (Wayfarer, Headliner, Skyler)          → 0x058E + 0x01AB
+ *  Gen 2  Ray-Ban Meta Blayzer Optics, Scriber Optics         → 0x058E + 0x01AB
+ *  Gen 2  Meta Ray-Ban Display (with Neural Band)             → 0x058E + 0x01AB
+ *  Gen 3  Oakley Meta HSTN, Vanguard                          → 0x0D53 + 0x058E
+ *  Quest  Meta Quest 2, 3, 3S, Pro                            → 0x058E + 0x01AB
+ *  Snap   Spectacles 3, 4, 5                                  → 0x03C2
  */
 
 export interface SmartGlassesCompany {
@@ -29,24 +38,63 @@ export const SMART_GLASSES_COMPANIES: SmartGlassesCompany[] = [
     numericId: 0x058e,
     name: "Meta Platforms Technologies, LLC",
     shortName: "Meta",
-    products: ["Ray-Ban Meta Smart Glasses", "Meta Orion", "Meta Quest 3", "Meta Quest 3S", "Meta Quest Pro"],
-    falsePositiveNote: "Detects Ray-Ban Meta glasses AND Meta Quest VR headsets — both use this company ID",
+    products: [
+      // Ray-Ban Meta Gen 2 styles
+      "Ray-Ban Meta Wayfarer",
+      "Ray-Ban Meta Headliner",
+      "Ray-Ban Meta Skyler",
+      // New prescription styles (Gen 2, announced Mar 2026)
+      "Ray-Ban Meta Blayzer Optics",
+      "Ray-Ban Meta Scriber Optics",
+      // Display model
+      "Meta Ray-Ban Display (with Neural Band)",
+      // Oakley Meta Gen 3 (also uses 0x0D53)
+      "Oakley Meta HSTN",
+      "Oakley Meta Vanguard",
+      // VR headsets (same company ID)
+      "Meta Quest 3",
+      "Meta Quest 3S",
+      "Meta Quest Pro",
+    ],
+    falsePositiveNote:
+      "Detects Ray-Ban Meta Gen 2, Oakley Meta Gen 3, Blayzer/Scriber, Meta Display AND Meta Quest VR headsets — all use this company ID",
   },
   {
     id: "0x01AB",
     numericId: 0x01ab,
-    name: "Meta Platforms, Inc. (formerly Facebook)",
+    name: "Meta Platforms, Inc. (formerly Facebook, Inc.)",
     shortName: "Meta (Facebook)",
-    products: ["Ray-Ban Stories", "Ray-Ban Meta", "Meta Quest 2", "Meta Quest 3"],
-    falsePositiveNote: "Detects Ray-Ban Stories AND Meta Quest headsets — both use this company ID",
+    products: [
+      // Ray-Ban Stories Gen 1 styles
+      "Ray-Ban Stories Wayfarer",
+      "Ray-Ban Stories Round",
+      "Ray-Ban Stories Meteor",
+      // Gen 2 also broadcasts this ID
+      "Ray-Ban Meta (Gen 2, all styles)",
+      "Ray-Ban Meta Blayzer Optics",
+      "Ray-Ban Meta Scriber Optics",
+      "Meta Ray-Ban Display",
+      // VR headsets
+      "Meta Quest 2",
+      "Meta Quest 3",
+    ],
+    falsePositiveNote:
+      "Detects Ray-Ban Stories Gen 1, Ray-Ban Meta Gen 2, AND Meta Quest headsets — all use this company ID",
   },
   {
     id: "0x0D53",
     numericId: 0x0d53,
-    name: "Luxottica Group S.p.A",
-    shortName: "Luxottica",
-    products: ["Ray-Ban Meta Smart Glasses"],
-    falsePositiveNote: "Luxottica manufactures Ray-Ban frames for Meta",
+    name: "EssilorLuxottica S.A.",
+    shortName: "EssilorLuxottica",
+    products: [
+      // Oakley Meta Gen 3 (EssilorLuxottica manufactures Oakley frames)
+      "Oakley Meta HSTN",
+      "Oakley Meta Vanguard",
+      // Ray-Ban Meta frames (Luxottica manufactures Ray-Ban)
+      "Ray-Ban Meta (all styles)",
+    ],
+    falsePositiveNote:
+      "EssilorLuxottica manufactures Oakley and Ray-Ban frames for Meta. May also appear on non-smart Luxottica eyewear with BLE chips.",
   },
   {
     id: "0x03C2",

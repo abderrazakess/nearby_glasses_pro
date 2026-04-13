@@ -225,10 +225,10 @@ export default function SettingsScreen() {
         {/* Company IDs Reference */}
         <SettingsSection title="MONITORED COMPANY IDs">
           {[
-            { id: "0x058E", name: "Meta Platforms Technologies", products: "Ray-Ban Meta · Quest 3 / 3S / Pro" },
-            { id: "0x01AB", name: "Meta Platforms, Inc.", products: "Ray-Ban Stories · Quest 2 / 3" },
-            { id: "0x0D53", name: "Luxottica Group S.p.A", products: "Ray-Ban frames" },
-            { id: "0x03C2", name: "Snap Inc.", products: "Spectacles" },
+            { id: "0x058E", name: "Meta Platforms Technologies", products: "Ray-Ban Meta (Wayfarer/Headliner/Skyler) · Blayzer · Scriber · Meta Display · Oakley Meta HSTN/Vanguard · Quest 3/3S/Pro" },
+            { id: "0x01AB", name: "Meta Platforms, Inc.", products: "Ray-Ban Stories Gen 1 (Wayfarer/Round/Meteor) · Ray-Ban Meta Gen 2 · Blayzer · Scriber · Meta Display · Quest 2/3" },
+            { id: "0x0D53", name: "EssilorLuxottica S.A.", products: "Oakley Meta HSTN · Oakley Meta Vanguard · Ray-Ban Meta frames" },
+            { id: "0x03C2", name: "Snap Inc.", products: "Spectacles 3 · Spectacles 4 · Spectacles 5" },
           ].map((company, i, arr) => (
             <View
               key={company.id}
