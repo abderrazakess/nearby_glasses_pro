@@ -25,3 +25,13 @@
 - [x] Add Debug tab showing all raw BLE devices with company IDs for troubleshooting
 - [x] Add Meta Quest 3 Bluetooth company identifier to detection database (uses same 0x058E / 0x01AB IDs as Ray-Ban Meta)
 - [x] Write short and long app descriptions with open source and GitHub references
+- [x] Install expo-sensors for gyroscope/magnetometer/accelerometer
+- [x] Build Kalman filter / EMA for RSSI smoothing
+- [x] Build useSensorOrientation hook (rotation vector, game rotation fallback)
+- [x] Build useRssiDirectionFinder hook (RSSI sampling across orientations)
+- [x] Build FinderScreen: animated arrow, proximity rings, gradient background
+- [x] Add proximity haptic feedback (increasing intensity/frequency)
+- [x] Wire FinderScreen into navigation from device list tap
+- [x] Handle edge cases: signal loss, out of range, sensor unavailable
+- [x] Add expo-sensors plugin to app.config.ts for motion sensor permissions
+- [x] Add BleScannerProvider context for live RSSI sharing to FinderScreen

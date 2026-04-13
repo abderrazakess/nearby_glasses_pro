@@ -114,6 +114,12 @@ const config: ExpoConfig = {
       },
     ],
     [
+      "expo-sensors",
+      {
+        motionPermission: "GlassesNearby Pro uses motion sensors to determine the direction of nearby smart glasses.",
+      },
+    ],
+    [
       "expo-build-properties",
       {
         android: {

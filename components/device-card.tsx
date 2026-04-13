@@ -1,5 +1,6 @@
 import React from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, StyleSheet, Pressable } from "react-native";
+import { useRouter } from "expo-router";
 import { useColors } from "@/hooks/use-colors";
 import type { DetectedDevice } from "@/hooks/use-ble-scanner";
 
@@ -31,12 +32,24 @@ function SignalBar({ strength, color }: { strength: number; color: string }) {
 
 export function DeviceCard({ device }: DeviceCardProps) {
   const colors = useColors();
+  const router = useRouter();
   const isStrong = device.rssi >= -65;
   const signalColor = isStrong ? colors.error : colors.warning;
 
   const timeSinceSeen = Math.round((Date.now() - device.lastSeen) / 1000);
   const timeLabel =
     timeSinceSeen < 5 ? "Just now" : `${timeSinceSeen}s ago`;
+
+  const handleFind = () => {
+    router.push({
+      pathname: "/finder",
+      params: {
+        deviceId: device.id,
+        deviceName: `${device.company.shortName} · ${device.company.products[0]}`,
+        rssi: String(device.rssi),
+      },
+    });
+  };
 
   return (
     <View
@@ -77,7 +90,7 @@ export function DeviceCard({ device }: DeviceCardProps) {
         </View>
       </View>
 
-      {/* Right: RSSI + Signal */}
+      {/* Right: RSSI + Signal + Find button */}
       <View style={styles.right}>
         <Text style={[styles.rssiValue, { color: signalColor, fontVariant: ["tabular-nums"] }]}>
           {device.rssi} dBm
@@ -86,6 +99,18 @@ export function DeviceCard({ device }: DeviceCardProps) {
         <Text style={[styles.distanceLabel, { color: colors.muted }]} numberOfLines={2}>
           {device.distance}
         </Text>
+        {/* Find button */}
+        <Pressable
+          onPress={handleFind}
+          style={({ pressed }) => [
+            styles.findBtn,
+            { backgroundColor: `${colors.primary}22`, opacity: pressed ? 0.7 : 1 },
+          ]}
+        >
+          <Text style={[styles.findBtnText, { color: colors.primary }]}>
+            Find ›
+          </Text>
+        </Pressable>
       </View>
     </View>
   );
@@ -135,7 +160,7 @@ const styles = StyleSheet.create({
   right: {
     alignItems: "flex-end",
     gap: 4,
-    minWidth: 90,
+    minWidth: 80,
   },
   rssiValue: {
     fontSize: 13,
@@ -153,6 +178,16 @@ const styles = StyleSheet.create({
   distanceLabel: {
     fontSize: 10,
     textAlign: "right",
-    maxWidth: 90,
+    maxWidth: 80,
+  },
+  findBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    marginTop: 2,
+  },
+  findBtnText: {
+    fontSize: 12,
+    fontWeight: "700",
   },
 });

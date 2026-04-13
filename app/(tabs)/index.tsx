@@ -21,6 +21,7 @@ import {
   type LogEntry,
 } from "@/hooks/use-ble-scanner";
 import { useNotifications } from "@/hooks/use-notifications";
+import { BleScannerProvider } from "@/hooks/use-ble-scanner-context";
 import * as Haptics from "expo-haptics";
 import { useKeepAwake } from "expo-keep-awake";
 
@@ -82,7 +83,7 @@ export default function ScannerScreen() {
     [sendDetectionNotification, showAlert, addLogEntry]
   );
 
-  const { isScanning, devices, error, startScanning, stopScanning } =
+  const { isScanning, devices, rawDevices, error, startScanning, stopScanning } =
     useBleScanner(settings, handleNewDetection);
 
   // Keep screen awake while scanning
@@ -102,6 +103,7 @@ export default function ScannerScreen() {
   const hasDetection = devices.length > 0;
 
   return (
+    <BleScannerProvider devices={devices} isScanning={isScanning}>
     <ScreenContainer containerClassName="bg-background">
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
@@ -258,6 +260,7 @@ export default function ScannerScreen() {
         </View>
       )}
     </ScreenContainer>
+    </BleScannerProvider>
   );
 }
 
