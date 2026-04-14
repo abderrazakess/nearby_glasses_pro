@@ -15,7 +15,14 @@
  *  Gen 3  Oakley Meta HSTN, Vanguard                          → 0x0D53 + 0x058E
  *  Quest  Meta Quest 2, 3, 3S, Pro                            → 0x058E + 0x01AB
  *  Snap   Spectacles 3, 4, 5                                  → 0x03C2
- *  Samsung Galaxy Buds 3 Pro, Buds 2 Pro, Buds Pro              → 0x0075
+ *
+ * How Ray-Ban Stories Gen 1 is detected:
+ *  - Primary:  manufacturer data company ID 0x01AB in BLE ADV_IND frame
+ *  - Fallback: device name contains "ray-ban", "rayban", "stories", or "ray ban stories"
+ *
+ * Note: Ray-Ban Stories Gen 1 was manufactured by EssilorLuxottica for Facebook/Meta.
+ * The glasses advertise using Facebook's (now Meta Platforms, Inc.) legacy company ID
+ * 0x01AB. Some units may also advertise by name only without manufacturer data.
  */
 
 export interface SmartGlassesCompany {
@@ -66,12 +73,14 @@ export const SMART_GLASSES_COMPANIES: SmartGlassesCompany[] = [
     name: "Meta Platforms, Inc. (formerly Facebook, Inc.)",
     shortName: "Meta (Facebook)",
     products: [
-      // Ray-Ban Stories Gen 1 styles
-      "Ray-Ban Stories Wayfarer",
-      "Ray-Ban Stories Round",
-      "Ray-Ban Stories Meteor",
-      // Gen 2 also broadcasts this ID
-      "Ray-Ban Meta (Gen 2, all styles)",
+      // Ray-Ban Stories Gen 1 — original Facebook-era smart glasses
+      "Ray-Ban Stories Wayfarer (Gen 1)",
+      "Ray-Ban Stories Round (Gen 1)",
+      "Ray-Ban Stories Meteor (Gen 1)",
+      // Gen 2 also broadcasts this legacy ID alongside 0x058E
+      "Ray-Ban Meta Wayfarer (Gen 2)",
+      "Ray-Ban Meta Headliner (Gen 2)",
+      "Ray-Ban Meta Skyler (Gen 2)",
       "Ray-Ban Meta Blayzer Optics",
       "Ray-Ban Meta Scriber Optics",
       "Meta Ray-Ban Display",
@@ -80,7 +89,7 @@ export const SMART_GLASSES_COMPANIES: SmartGlassesCompany[] = [
       "Meta Quest 3",
     ],
     falsePositiveNote:
-      "Detects Ray-Ban Stories Gen 1, Ray-Ban Meta Gen 2, AND Meta Quest headsets — all use this company ID",
+      "Detects Ray-Ban Stories Gen 1, Ray-Ban Meta Gen 2, AND Meta Quest headsets — all use this legacy Facebook company ID",
   },
   {
     id: "0x0D53",
@@ -93,9 +102,11 @@ export const SMART_GLASSES_COMPANIES: SmartGlassesCompany[] = [
       "Oakley Meta Vanguard",
       // Ray-Ban Meta frames (Luxottica manufactures Ray-Ban)
       "Ray-Ban Meta (all styles)",
+      // Ray-Ban Stories Gen 1 (Luxottica manufactured the frames)
+      "Ray-Ban Stories (Gen 1, some units)",
     ],
     falsePositiveNote:
-      "EssilorLuxottica manufactures Oakley and Ray-Ban frames for Meta. May also appear on non-smart Luxottica eyewear with BLE chips.",
+      "EssilorLuxottica manufactures Oakley and Ray-Ban frames for Meta. Some Ray-Ban Stories Gen 1 units may also advertise this ID.",
   },
   {
     id: "0x03C2",
@@ -104,24 +115,6 @@ export const SMART_GLASSES_COMPANIES: SmartGlassesCompany[] = [
     shortName: "Snapchat",
     products: ["Spectacles 3", "Spectacles 4", "Spectacles 5"],
     falsePositiveNote: "Snap Spectacles AR glasses",
-  },
-  {
-    id: "0x0075",
-    numericId: 0x0075,
-    name: "Samsung Electronics Co. Ltd.",
-    shortName: "Samsung",
-    products: [
-      // Galaxy Buds with open-ear / AI audio features
-      "Galaxy Buds 3 Pro",
-      "Galaxy Buds 3",
-      "Galaxy Buds 2 Pro",
-      "Galaxy Buds 2",
-      "Galaxy Buds Pro",
-      "Galaxy Buds Live",
-      "Galaxy Buds+",
-    ],
-    falsePositiveNote:
-      "0x0075 is Samsung's primary BLE company ID — used by all Galaxy Buds, Galaxy Watch, and Galaxy Ring. May trigger on any Samsung wearable nearby.",
   },
 ];
 
@@ -145,7 +138,11 @@ export function findSmartGlassesCompany(
  *
  * react-native-ble-plx returns manufacturerData as a base64-encoded string.
  * The first 2 bytes are the company identifier in little-endian order.
- * e.g. Ray-Ban Stories (0x01AB = 427): bytes[0]=0xAB, bytes[1]=0x01
+ *
+ * Ray-Ban Stories Gen 1 example:
+ *   Company ID 0x01AB = 427 decimal
+ *   Little-endian bytes: [0xAB, 0x01, ...]
+ *   Base64 of [0xAB, 0x01, 0x00]: "qwEA"
  *
  * Returns the company ID as a number, or null if data is too short/invalid.
  */

@@ -10,7 +10,7 @@ import {
 
 describe("Smart Glasses Company IDs", () => {
   it("should have 4 known companies", () => {
-    expect(SMART_GLASSES_COMPANIES).toHaveLength(5);
+    expect(SMART_GLASSES_COMPANIES).toHaveLength(4);
   });
 
   it("should find Meta Platforms Technologies by ID 0x058E", () => {
@@ -43,12 +43,19 @@ describe("Smart Glasses Company IDs", () => {
     expect(company).toBeUndefined();
   });
 
+  it("should NOT detect Samsung Galaxy Buds (0x0075 removed)", () => {
+    const company = findSmartGlassesCompany(0x0075);
+    expect(company).toBeUndefined();
+  });
+
   it("should have all company IDs in the Set", () => {
     expect(SMART_GLASSES_COMPANY_IDS.has(0x058e)).toBe(true);
     expect(SMART_GLASSES_COMPANY_IDS.has(0x01ab)).toBe(true);
     expect(SMART_GLASSES_COMPANY_IDS.has(0x0d53)).toBe(true);
     expect(SMART_GLASSES_COMPANY_IDS.has(0x03c2)).toBe(true);
     expect(SMART_GLASSES_COMPANY_IDS.has(0x9999)).toBe(false);
+    // Samsung removed — must not be in the set
+    expect(SMART_GLASSES_COMPANY_IDS.has(0x0075)).toBe(false);
   });
 });
 

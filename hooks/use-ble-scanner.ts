@@ -368,16 +368,28 @@ export function useBleScanner(
           // This catches devices that may advertise without manufacturer data
           const name = (device.name || device.localName || "").toLowerCase();
           const nameMatches: Array<{ pattern: string; companyId: number }> = [
-            // Ray-Ban glasses
+            // Ray-Ban Stories Gen 1 — advertise by name on some firmware versions
+            { pattern: "ray-ban stories", companyId: 0x01ab },
+            { pattern: "rayban stories", companyId: 0x01ab },
+            { pattern: "rb stories", companyId: 0x01ab },
+            // Ray-Ban Meta Gen 2 — may advertise by name
+            { pattern: "ray-ban meta", companyId: 0x01ab },
+            { pattern: "rayban meta", companyId: 0x01ab },
+            // Generic Ray-Ban fallback (catches both Gen 1 and Gen 2)
             { pattern: "ray-ban", companyId: 0x01ab },
             { pattern: "rayban", companyId: 0x01ab },
+            { pattern: "ray ban", companyId: 0x01ab },
+            // Oakley Meta Gen 3
+            { pattern: "oakley meta", companyId: 0x0d53 },
+            { pattern: "oakley hstn", companyId: 0x0d53 },
+            { pattern: "oakley vanguard", companyId: 0x0d53 },
             // Meta Quest VR headsets (same company IDs as Ray-Ban Meta)
             { pattern: "quest 3", companyId: 0x058e },
             { pattern: "quest 2", companyId: 0x058e },
             { pattern: "quest pro", companyId: 0x058e },
             { pattern: "meta quest", companyId: 0x058e },
             { pattern: "oculus quest", companyId: 0x058e },
-            // Meta glasses
+            // Meta glasses generic
             { pattern: "meta glasses", companyId: 0x058e },
             // Snap Spectacles
             { pattern: "spectacles", companyId: 0x03c2 },
